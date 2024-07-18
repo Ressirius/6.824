@@ -14,6 +14,34 @@ import "strconv"
 // and reply for an RPC.
 //
 
+// 创建任务枚举
+type MRJobType int
+
+const (
+    UnknownJob MRJobType = iota     // 未知任务
+    MapJob                          // map任务
+    ReduceJob                       // reduce任务
+    WaitJob                         // map任务分配完闭，worker等待reduce任务
+)
+
+// 任务状态枚举
+type MRJobState int
+
+const (
+    UnknownState MRJobState = iota  // 未知状态
+    UnFinish                        // 未完成
+    Progressing                     // 进行中
+    Finish                          // 完成
+)
+
+type Job struct {
+    JobType MRJobType       // 任务类型
+    JobState MRJobState     // 任务状态
+
+    JobId int               // 任务键
+    OperateFileName string  // 任务操纵的文件
+}
+
 type ExampleArgs struct {
 	X int
 }

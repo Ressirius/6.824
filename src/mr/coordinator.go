@@ -1,15 +1,32 @@
 package mr
 
-import "log"
-import "net"
-import "os"
-import "net/rpc"
-import "net/http"
+import (
+	"html/template"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+	"sync"  // 锁
+)
 
 
 type Coordinator struct {
 	// Your definitions here.
+    files []string              // 操作的文件
+    nReduce int                 // reduce任务数
+    allJob map[MRJobType][]Job  // 所有的任务清单
+    
+    // map job
+    mapJobFinish bool           // map任务是否全部完成
+    mapJob []Job                // map任务清单
 
+    // reduce job
+    reduceJobFinish bool        // reduce任务是否全部完成
+    reduceJob []Job             // reduce任务清单
+
+    // lock
+    lock sync.Mutex             // 锁
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -63,6 +80,42 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
+    
+
+    // 初始化Coordinator
+    c.nReduce = nReduce
+    c.files = files
+
+    c.mapJobFinish = false
+    c.reduceJobFinish = false
+    c.mapJob = make([]Job, 0)
+    c.reduceJob = make([]Job, 0)
+
+    // 遍历输入文件，制作map任务清单
+    for i, filename := range files {
+        tempJob := Job{
+            JobType: MapJob,
+            OperateFileName: filename,
+            JobId: i,
+            JobState: UnFinish,
+        }
+        c.mapJob = append(c.mapJob, tempJob)
+    }
+
+    // 根据nRedcue, 制作reduce任务清单
+    for i := 0; i < nReduce; i++ {
+        tempJob := Job{
+            JobType: ReduceJob,
+            JobId: i,
+            JobState: UnFinish,
+        }
+        c.reduceJob = append(c.reduceJob, tempJob)
+    }
+    
+    // 将所有任务载入队列
+    c.allJob = make(map[MRJobType][]Job)
+    c.allJob[MapJob] = c.mapJob
+    c.allJob[ReduceJob] = c.reduceJob
 
 
 	c.server()
